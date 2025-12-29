@@ -10,7 +10,7 @@ variables:
 
 .flutter_setup: &flutter_setup
   before_script:
-    - apt-get update -qq && apt-get install -y -qq unzip wget xz-utils
+    - apt-get update -qq && apt-get install -y -qq unzip wget xz-utils git curl
     - wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
     - tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
     - export PATH="$PATH:$(pwd)/flutter/bin"
@@ -26,6 +26,7 @@ analyze:
   only:
     - merge_requests
     - main
+    - master
 
 test:
   stage: test
@@ -36,6 +37,7 @@ test:
   only:
     - merge_requests
     - main
+    - master
   allow_failure: true  # Some tests may need hardware
 
 build_android_debug:
@@ -52,6 +54,7 @@ build_android_debug:
     expire_in: 1 week
   only:
     - main
+    - master
     - tags
 
 # Production builds require signing keys - run locally or set up secure variables
