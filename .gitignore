@@ -1,0 +1,71 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+*.bak
+*.tmp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/macos/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/.gradle/
+/android/.kotlin/
+/android/local.properties
+/android/key.properties
+*.jks
+*.keystore
+
+# iOS/macOS
+**/Pods/
+**/DerivedData/
+*.xcuserstate
+*.pbxuser
+*.perspectivev3
+**/xcuserdata/
+
+# SDK Archives (keep extracted SDKs, ignore compressed archives)
+*.tar.gz
+
+# Windows
+*.pdb
+
+# Linux
+*.so

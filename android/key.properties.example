@@ -1,0 +1,8 @@
+# Signing config for release builds
+# Copy to key.properties and fill in your values
+# Don't commit this file!
+
+storeFile=upload-keystore.jks
+storePassword=your_password_here
+keyAlias=upload
+keyPassword=your_password_here

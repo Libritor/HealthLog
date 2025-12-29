@@ -1,0 +1,57 @@
+name: muselog
+description: Flutter app for Muse S/Athena brain-sensing headbands - real-time EEG visualization and CSV recording.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.0
+  
+  # Bluetooth Low Energy
+  flutter_blue_plus: ^1.31.0
+  
+  # Charts & Visualization
+  fl_chart: ^0.65.0
+  
+  # CSV Processing
+  csv: ^6.0.0
+  
+  # File System & Storage
+  path_provider: ^2.1.0
+  
+  # Sharing
+  share_plus: ^7.2.0
+  
+  # OSC Streaming
+  osc: ^1.0.0
+
+  
+  # Permissions
+  permission_handler: ^11.0.1
+  
+  # Utilities
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo_icon.jpg"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+
