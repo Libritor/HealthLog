@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -15,8 +18,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     defaultConfig {
@@ -33,9 +38,9 @@ android {
     // Load signing config from key.properties (gitignored) if it exists.
     // For first-time setup, copy key.properties.example to key.properties
     val keyPropertiesFile = rootProject.file("key.properties")
-    val keyProperties = java.util.Properties()
+    val keyProperties = Properties()
     if (keyPropertiesFile.exists()) {
-        keyProperties.load(java.io.FileInputStream(keyPropertiesFile))
+        keyProperties.load(FileInputStream(keyPropertiesFile))
     }
 
     signingConfigs {
