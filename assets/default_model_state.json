@@ -1,0 +1,20 @@
+{
+  "gmm_weights": [0.33, 0.34, 0.33],
+  "gmm_means": [
+    [-1.0, -1.0],
+    [0.0, 0.0],
+    [1.0, 1.0]
+  ],
+  "gmm_covariances": [
+    [[1.0, 0.0], [0.0, 1.0]],
+    [[1.0, 0.0], [0.0, 1.0]],
+    [[1.0, 0.0], [0.0, 1.0]]
+  ],
+  "pca_mean": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  "pca_components": [
+    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  ],
+  "cluster_order": [0, 1, 2],
+  "description": "Default model state for testing - should be replaced with calibrated model for accurate results"
+}

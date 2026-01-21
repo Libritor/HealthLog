@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/device_provider.dart';
 import '../providers/recording_provider.dart';
+import '../providers/arousal_provider.dart';
 import '../../domain/models/session_config.dart';
 import '../widgets/hsi_indicator.dart';
 import '../widgets/eeg_chart.dart';
 import '../widgets/fnirs_chart.dart';
 import '../widgets/imu_chart.dart';
 import '../widgets/band_power_chart.dart';
+import '../widgets/arousal_index_widget.dart';
 import '../../data/muse/osc_service.dart';
 import '../providers/osc_streaming_provider.dart';
 import 'post_session_screen.dart';
@@ -265,6 +267,16 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   error: (e, s) => Center(child: Text('fNIRS not available')),
                 ),
           ),
+
+          const SizedBox(height: 24),
+
+          // Arousal Index
+          Text(
+            'Arousal Index',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ArousalIndexWidget(deviceId: deviceId),
 
           const SizedBox(height: 24),
 
@@ -530,6 +542,7 @@ class _StreamKeeperState extends ConsumerState<_StreamKeeper> {
     ref.watch(bandPowerStreamProvider(widget.deviceId));
     ref.watch(fnirsStreamProvider(widget.deviceId));
     ref.watch(imuStreamProvider(widget.deviceId));
+    ref.watch(arousalStreamProvider(widget.deviceId)); // Keep arousal stream alive
     
     // Battery stream - update device state when data arrives
     ref.watch(batteryStreamProvider(widget.deviceId)).whenData((battery) {

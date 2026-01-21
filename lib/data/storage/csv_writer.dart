@@ -6,6 +6,7 @@ import '../../domain/models/band_power_sample.dart';
 import '../../domain/models/fnirs_sample.dart';
 import '../../domain/models/imu_sample.dart';
 import '../../domain/models/muse_device.dart';
+import '../../domain/models/arousal_sample.dart';
 
 // Writes sensor data to CSV incrementally (no buffering entire session).
 class CsvWriter {
@@ -45,6 +46,7 @@ class CsvWriter {
     BandPowerSample? bandPowerSample,
     FnirsSample? fnirsSample,
     ImuSample? imuSample,
+    ArousalSample? arousalSample,
   }) async {
     if (!_headerWritten) {
       await writeHeader();
@@ -82,6 +84,9 @@ class CsvWriter {
     }
     if (imuSample != null) {
       allValues.addAll(imuSample.toCsvValues());
+    }
+    if (arousalSample != null) {
+      allValues.addAll(arousalSample.toCsvValues());
     }
 
     final row = selectedColumns.map((col) => allValues[col] ?? '').toList();

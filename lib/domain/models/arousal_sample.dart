@@ -39,5 +39,13 @@ class ArousalSample {
       if (clusterProbs != null) 'cluster_probs': clusterProbs,
     };
   }
+
+  Map<String, String> toCsvValues() {
+    return {
+      'AROUSAL_INDEX': arousalIndex.toStringAsFixed(4),
+      'AROUSAL_LABEL': arousalLabel,
+      'AROUSAL_CONFIDENCE': confidence.toStringAsFixed(4),
+    };
+  }
 }
 

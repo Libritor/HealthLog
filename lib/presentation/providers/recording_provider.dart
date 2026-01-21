@@ -5,10 +5,12 @@ import '../../domain/models/session_config.dart';
 import '../../domain/models/band_power_sample.dart';
 import '../../domain/models/fnirs_sample.dart';
 import '../../domain/models/imu_sample.dart';
+import '../../domain/models/arousal_sample.dart';
 import '../../data/storage/csv_writer.dart';
 import '../../data/storage/file_storage_helper.dart';
 import '../../core/constants.dart';
 import 'device_provider.dart';
+import 'arousal_provider.dart';
 
 final sessionConfigProvider =
     StateNotifierProvider<SessionConfigNotifier, SessionConfig?>((ref) {
@@ -145,6 +147,7 @@ class RecordingManager {
   final Map<String, BandPowerSample> _latestBandPower = {};
   final Map<String, FnirsSample> _latestFnirs = {};
   final Map<String, ImuSample> _latestImu = {};
+  final Map<String, ArousalSample> _latestArousal = {};
 
   RecordingManager(this.ref);
 
@@ -160,6 +163,7 @@ class RecordingManager {
     _latestBandPower.clear();
     _latestFnirs.clear();
     _latestImu.clear();
+    _latestArousal.clear();
 
     final csvWritersNotifier = ref.read(csvWritersProvider.notifier);
     final deviceNamesNotifier = ref.read(deviceNamesProvider.notifier);
@@ -210,6 +214,7 @@ class RecordingManager {
           bandPowerSample: _latestBandPower[deviceId],
           fnirsSample: _latestFnirs[deviceId],
           imuSample: _latestImu[deviceId],
+          arousalSample: _latestArousal[deviceId],
         );
       },
       onError: (error) => print('EEG stream error for $deviceId: $error'),
@@ -245,6 +250,15 @@ class RecordingManager {
       onError: (error) => print('IMU stream error for $deviceId: $error'),
     );
     _subscriptions['${deviceId}_imu'] = imuSub;
+
+    // Arousal Index at ~0.5 Hz (updates every 2 seconds)
+    final arousalSub = ref.read(arousalStreamProvider(deviceId).stream).listen(
+      (arousalSample) {
+        _latestArousal[deviceId] = arousalSample;
+      },
+      onError: (error) => print('Arousal stream error for $deviceId: $error'),
+    );
+    _subscriptions['${deviceId}_arousal'] = arousalSub;
   }
 
   Future<void> stopRecording() async {

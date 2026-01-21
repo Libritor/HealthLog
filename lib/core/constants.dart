@@ -101,6 +101,10 @@ class AppConstants {
     'AMBIENT_RIGHT_INNER',
     // Battery
     'BATTERY_PERCENT',
+    // Arousal Index
+    'AROUSAL_INDEX',
+    'AROUSAL_LABEL',
+    'AROUSAL_CONFIDENCE',
   ];
 
   // Column groups for UI selection
@@ -200,6 +204,11 @@ class AppConstants {
       'AMBIENT_RIGHT_INNER',
     ],
     'Battery': ['BATTERY_PERCENT'],
+    'Arousal Index': [
+      'AROUSAL_INDEX',
+      'AROUSAL_LABEL',
+      'AROUSAL_CONFIDENCE',
+    ],
   };
 
   // HSI (Horseshoe Signal Indicator) values and color mapping
