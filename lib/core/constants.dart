@@ -242,4 +242,8 @@ class AppConstants {
     'Beta',
     'Gamma'
   ];
+
+  // AI/Arousal backend URL
+  // Update this to point to your FastAPI backend
+  static const String arousalBackendUrl = 'http://localhost:8000';
 }

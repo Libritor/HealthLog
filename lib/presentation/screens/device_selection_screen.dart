@@ -5,6 +5,7 @@ import '../providers/device_provider.dart';
 import '../providers/recording_provider.dart';
 import 'recording_config_screen.dart';
 import 'past_recordings_screen.dart';
+import '../../features/arousal/presentation/screens/session_gateway_screen.dart';
 
 /// Device selection and scanning screen
 class DeviceSelectionScreen extends ConsumerStatefulWidget {
@@ -301,11 +302,11 @@ class _DeviceSelectionScreenState
       return;
     }
 
-    // Navigate to recording configuration
+    // Navigate to session gateway (choose between data collection or AI mentor)
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const RecordingConfigScreen(),
+        builder: (context) => const SessionGatewayScreen(),
       ),
     );
   }
