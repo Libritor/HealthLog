@@ -29,7 +29,7 @@ class _PostSessionScreenState extends ConsumerState<PostSessionScreen> {
     final files = await FileStorageHelper.listSessionFiles();
     setState(() {
       // Get the most recent files (last recording)
-      _sessionFiles = files.take(10).toList(); // Show last 10 files
+      _sessionFiles = files.take(15).toList(); // Show last 15 files
       _isLoading = false;
     });
   }
