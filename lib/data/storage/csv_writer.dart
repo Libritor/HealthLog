@@ -55,7 +55,7 @@ class CsvWriter {
     final allValues = <String, String>{
       'PACKET_TYPE': packetType,
       'DEVICE_NAME': deviceName,
-      'CLOCK_TIME': _dateFormat.format(timestamp.toUtc()),
+      'CLOCK_TIME': _dateFormat.format(timestamp),  // Local time (no UTC conversion)
       'ms_ELAPSED':
           timestamp.difference(_sessionStartTime!).inMilliseconds.toString(),
       'TRIGGER_COUNT': _triggerCount.toString(),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/device_provider.dart';
 import '../providers/recording_provider.dart';
 import 'recording_config_screen.dart';
+import 'past_recordings_screen.dart';
 
 /// Device selection and scanning screen
 class DeviceSelectionScreen extends ConsumerStatefulWidget {
@@ -146,47 +147,60 @@ class _DeviceSelectionScreenState
             ),
           ),
 
-          // Bottom action buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                if (selectedDevices.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      '${selectedDevices.length} device(s) selected',
-                      style: Theme.of(context).textTheme.titleSmall,
+          // Bottom action buttons with SafeArea for devices with navigation bars
+          SafeArea(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (selectedDevices.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        '${selectedDevices.length} device(s) selected',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: selectedDevices.isEmpty ? null : _connectSelected,
+                          child: const Text('Connect Selected'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: selectedDevices.isEmpty ? null : _startSession,
+                          child: const Text('Start Session'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Past Recordings button - always accessible
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: _viewPastRecordings,
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text('View Past Recordings'),
                     ),
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: selectedDevices.isEmpty ? null : _connectSelected,
-                        child: const Text('Connect Selected'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: selectedDevices.isEmpty ? null : _startSession,
-                        child: const Text('Start Session'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -292,6 +306,15 @@ class _DeviceSelectionScreenState
       context,
       MaterialPageRoute(
         builder: (context) => const RecordingConfigScreen(),
+      ),
+    );
+  }
+
+  void _viewPastRecordings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PastRecordingsScreen(),
       ),
     );
   }

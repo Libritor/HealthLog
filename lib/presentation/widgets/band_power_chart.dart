@@ -47,10 +47,11 @@ class _BandPowerChartState extends State<BandPowerChart> {
 
     final sample = _latestSample!;
 
-    // Helper to sanitize values
+    // Helper to sanitize values - clamp to >= 0 for bar chart display
     double safeValue(double val) {
       if (val.isNaN || val.isInfinite) return 0.0;
-      return val;
+      // Band powers can be negative in log scale, but for bar chart we clamp to 0
+      return val < 0 ? 0.0 : val;
     }
 
     // Average across all 4 channels for simplicity

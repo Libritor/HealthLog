@@ -249,25 +249,22 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
 
           const SizedBox(height: 24),
 
-          // fNIRS (Oxygenation) - Only for Muse S
-          if (device.name.contains('Muse S')) ...[
-            Text(
-              'fNIRS (Oxygenation)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 200,
-              child: ref.watch(fnirsStreamProvider(deviceId)).when(
-                    data: (sample) => FnirsChart(
-                      dataStream: ref.read(fnirsStreamProvider(deviceId).stream),
-                    ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, s) => Center(child: Text('Error: $e')),
+          // fNIRS (Oxygenation) - Always show, data will be empty if device doesn't support it
+          Text(
+            'fNIRS (Oxygenation)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 200,
+            child: ref.watch(fnirsStreamProvider(deviceId)).when(
+                  data: (sample) => FnirsChart(
+                    dataStream: ref.read(fnirsStreamProvider(deviceId).stream),
                   ),
-            ),
-            const SizedBox(height: 24),
-          ],
+                  loading: () => const Center(child: Text('Waiting for fNIRS data...')),
+                  error: (e, s) => Center(child: Text('fNIRS not available')),
+                ),
+          ),
 
           const SizedBox(height: 24),
 
