@@ -26,6 +26,11 @@ class FnirsSample {
   final double ambientLeftInner;
   final double ambientRightInner;
 
+  // PPG readings (from PPG packet, may be available on some models)
+  final double? ppgGreen; // AMBIENT on some models represents GREEN
+  final double? ppgIr;
+  final double? ppgRed;
+
   const FnirsSample({
     required this.timestamp,
     required this.nm730LeftOuter,
@@ -44,6 +49,9 @@ class FnirsSample {
     required this.ambientRightOuter,
     required this.ambientLeftInner,
     required this.ambientRightInner,
+    this.ppgGreen,
+    this.ppgIr,
+    this.ppgRed,
   });
 
   // 850nm/730nm ratio = rough oxygenation proxy.
@@ -80,6 +88,9 @@ class FnirsSample {
       'RED_RIGHT_INNER': redRightInner.toStringAsFixed(6),
       'AMBIENT_LEFT_INNER': ambientLeftInner.toStringAsFixed(6),
       'AMBIENT_RIGHT_INNER': ambientRightInner.toStringAsFixed(6),
+      'PPG_GREEN': (ppgGreen ?? 0.0).toStringAsFixed(6),
+      'PPG_IR': (ppgIr ?? 0.0).toStringAsFixed(6),
+      'PPG_RED': (ppgRed ?? 0.0).toStringAsFixed(6),
     };
   }
 }

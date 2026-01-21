@@ -232,6 +232,7 @@ class MusePlatformRepository implements MuseService {
 
     _globalFnirsSubscription = _platformChannel.getFnirsStream('global').listen((data) {
       final receivedDeviceId = data['deviceId'] as String?;
+      print('fNIRS data received from platform: deviceId=$receivedDeviceId, keys=${data.keys.toList()}');
       
       var controller = _fnirsControllers[receivedDeviceId];
       
@@ -243,12 +244,67 @@ class MusePlatformRepository implements MuseService {
       
       if (controller != null && !controller.isClosed) {
         final timestamp = data['timestamp'] as int;
-        final ppg0 = data['ppg0'] as double? ?? 0.0;
-        final ppg1 = data['ppg1'] as double? ?? 0.0;
-        final ppg2 = data['ppg2'] as double? ?? 0.0;
-        final ppg3 = data['ppg3'] as double? ?? 0.0;
-        final ppg4 = data['ppg4'] as double? ?? 0.0;
-        final ppg5 = data['ppg5'] as double? ?? 0.0;
+        
+        // Check if we have OPTICS data (new format with proper field names)
+        if (data.containsKey('nm730LeftOuter')) {
+          // OPTICS packet format - all 16 channels available
+          final sample = FnirsSample(
+            timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
+            nm730LeftOuter: (data['nm730LeftOuter'] as num?)?.toDouble() ?? 0.0,
+            nm730RightOuter: (data['nm730RightOuter'] as num?)?.toDouble() ?? 0.0,
+            nm730LeftInner: (data['nm730LeftInner'] as num?)?.toDouble() ?? 0.0,
+            nm730RightInner: (data['nm730RightInner'] as num?)?.toDouble() ?? 0.0,
+            nm850LeftOuter: (data['nm850LeftOuter'] as num?)?.toDouble() ?? 0.0,
+            nm850RightOuter: (data['nm850RightOuter'] as num?)?.toDouble() ?? 0.0,
+            nm850LeftInner: (data['nm850LeftInner'] as num?)?.toDouble() ?? 0.0,
+            nm850RightInner: (data['nm850RightInner'] as num?)?.toDouble() ?? 0.0,
+            redLeftOuter: (data['redLeftOuter'] as num?)?.toDouble() ?? 0.0,
+            redRightOuter: (data['redRightOuter'] as num?)?.toDouble() ?? 0.0,
+            redLeftInner: (data['redLeftInner'] as num?)?.toDouble() ?? 0.0,
+            redRightInner: (data['redRightInner'] as num?)?.toDouble() ?? 0.0,
+            ambientLeftOuter: (data['ambientLeftOuter'] as num?)?.toDouble() ?? 0.0,
+            ambientRightOuter: (data['ambientRightOuter'] as num?)?.toDouble() ?? 0.0,
+            ambientLeftInner: (data['ambientLeftInner'] as num?)?.toDouble() ?? 0.0,
+            ambientRightInner: (data['ambientRightInner'] as num?)?.toDouble() ?? 0.0,
+            ppgGreen: (data['ppgGreen'] as num?)?.toDouble(),
+            ppgIr: (data['ppgIr'] as num?)?.toDouble(),
+            ppgRed: (data['ppgRed'] as num?)?.toDouble(),
+          );
+          controller.add(sample);
+        } else if (data.containsKey('ppgGreen') || data.containsKey('ppgIr') || data.containsKey('ppgRed')) {
+          // PPG-only packet (from older models or separate PPG stream)
+          // Merge with existing sample if available, otherwise create new with zeros
+          final sample = FnirsSample(
+            timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
+            nm730LeftOuter: 0.0,
+            nm730RightOuter: 0.0,
+            nm730LeftInner: 0.0,
+            nm730RightInner: 0.0,
+            nm850LeftOuter: 0.0,
+            nm850RightOuter: 0.0,
+            nm850LeftInner: 0.0,
+            nm850RightInner: 0.0,
+            redLeftOuter: 0.0,
+            redRightOuter: 0.0,
+            redLeftInner: 0.0,
+            redRightInner: 0.0,
+            ambientLeftOuter: 0.0,
+            ambientRightOuter: 0.0,
+            ambientLeftInner: 0.0,
+            ambientRightInner: 0.0,
+            ppgGreen: (data['ppgGreen'] as num?)?.toDouble(),
+            ppgIr: (data['ppgIr'] as num?)?.toDouble(),
+            ppgRed: (data['ppgRed'] as num?)?.toDouble(),
+          );
+          controller.add(sample);
+        } else {
+          // Legacy format (ppg0-ppg5) - fallback for compatibility
+          final ppg0 = (data['ppg0'] as num?)?.toDouble() ?? 0.0;
+          final ppg1 = (data['ppg1'] as num?)?.toDouble() ?? 0.0;
+          final ppg2 = (data['ppg2'] as num?)?.toDouble() ?? 0.0;
+          final ppg3 = (data['ppg3'] as num?)?.toDouble() ?? 0.0;
+          final ppg4 = (data['ppg4'] as num?)?.toDouble() ?? 0.0;
+          final ppg5 = (data['ppg5'] as num?)?.toDouble() ?? 0.0;
         
         final sample = FnirsSample(
           timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
@@ -270,6 +326,7 @@ class MusePlatformRepository implements MuseService {
           ambientRightInner: ppg1,
         );
         controller.add(sample);
+        }
       }
     });
   }

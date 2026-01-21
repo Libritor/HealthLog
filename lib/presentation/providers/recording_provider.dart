@@ -230,6 +230,7 @@ class RecordingManager {
     // fNIRS at ~64 Hz
     final fnirsSub = ref.read(fnirsStreamProvider(deviceId).stream).listen(
       (fnirsSample) {
+        print('fNIRS data received for $deviceId: 730nm_LO=${fnirsSample.nm730LeftOuter}, 850nm_LO=${fnirsSample.nm850LeftOuter}');
         _latestFnirs[deviceId] = fnirsSample;
       },
       onError: (error) => print('fNIRS stream error for $deviceId: $error'),

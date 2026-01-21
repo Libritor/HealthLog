@@ -117,20 +117,96 @@ class MainActivity: FlutterActivity() {
                     )
                     runOnUiThread { imuEventSink?.success(data) }
                 }
+                MuseDataPacketType.OPTICS -> {
+                    // OPTICS packets contain 16 channels of fNIRS data for Muse S Athena
+                    Log.d("MuseSDK", "OPTICS packet received for $deviceId")
+                    try {
+                        // Try using getOpticsChannelValue first
+                        val data = mapOf(
+                            "deviceId" to deviceId,
+                            "timestamp" to timestamp,
+                            // 730nm wavelengths
+                            "nm730LeftOuter" to packet.getOpticsChannelValue(Optics.OPTICS1),
+                            "nm730RightOuter" to packet.getOpticsChannelValue(Optics.OPTICS2),
+                            "nm730LeftInner" to packet.getOpticsChannelValue(Optics.OPTICS5),
+                            "nm730RightInner" to packet.getOpticsChannelValue(Optics.OPTICS6),
+                            // 850nm wavelengths
+                            "nm850LeftOuter" to packet.getOpticsChannelValue(Optics.OPTICS3),
+                            "nm850RightOuter" to packet.getOpticsChannelValue(Optics.OPTICS4),
+                            "nm850LeftInner" to packet.getOpticsChannelValue(Optics.OPTICS7),
+                            "nm850RightInner" to packet.getOpticsChannelValue(Optics.OPTICS8),
+                            // Red wavelengths
+                            "redLeftOuter" to packet.getOpticsChannelValue(Optics.OPTICS9),
+                            "redRightOuter" to packet.getOpticsChannelValue(Optics.OPTICS10),
+                            "redLeftInner" to packet.getOpticsChannelValue(Optics.OPTICS13),
+                            "redRightInner" to packet.getOpticsChannelValue(Optics.OPTICS14),
+                            // Ambient wavelengths
+                            "ambientLeftOuter" to packet.getOpticsChannelValue(Optics.OPTICS11),
+                            "ambientRightOuter" to packet.getOpticsChannelValue(Optics.OPTICS12),
+                            "ambientLeftInner" to packet.getOpticsChannelValue(Optics.OPTICS15),
+                            "ambientRightInner" to packet.getOpticsChannelValue(Optics.OPTICS16),
+                        )
+                        Log.d("MuseSDK", "OPTICS values: 730LO=${data["nm730LeftOuter"]}, 850LO=${data["nm850LeftOuter"]}")
+                        runOnUiThread { fnirsEventSink?.success(data) }
+                    } catch (e: Exception) {
+                        // Fallback: try using values() array directly
+                        Log.w("MuseSDK", "getOpticsChannelValue failed, using values(): ${e.message}")
+                        val values = packet.values()
+                        Log.d("MuseSDK", "OPTICS values array size: ${values.size}")
+                        if (values.size >= 16) {
+                            val data = mapOf(
+                                "deviceId" to deviceId,
+                                "timestamp" to timestamp,
+                                "nm730LeftOuter" to values[0].toDouble(),
+                                "nm730RightOuter" to values[1].toDouble(),
+                                "nm850LeftOuter" to values[2].toDouble(),
+                                "nm850RightOuter" to values[3].toDouble(),
+                                "nm730LeftInner" to values[4].toDouble(),
+                                "nm730RightInner" to values[5].toDouble(),
+                                "nm850LeftInner" to values[6].toDouble(),
+                                "nm850RightInner" to values[7].toDouble(),
+                                "redLeftOuter" to values[8].toDouble(),
+                                "redRightOuter" to values[9].toDouble(),
+                                "ambientLeftOuter" to values[10].toDouble(),
+                                "ambientRightOuter" to values[11].toDouble(),
+                                "redLeftInner" to values[12].toDouble(),
+                                "redRightInner" to values[13].toDouble(),
+                                "ambientLeftInner" to values[14].toDouble(),
+                                "ambientRightInner" to values[15].toDouble(),
+                            )
+                            runOnUiThread { fnirsEventSink?.success(data) }
+                        }
+                    }
+                }
                 MuseDataPacketType.PPG -> {
-                    // ... (Existing PPG handling)
-                    val values = packet.values()
-                    val data = mapOf(
-                        "deviceId" to deviceId,
-                        "timestamp" to timestamp,
-                        "ppg0" to values.getOrNull(0)?.toDouble(),
-                        "ppg1" to values.getOrNull(1)?.toDouble(),
-                        "ppg2" to values.getOrNull(2)?.toDouble(),
-                        "ppg3" to values.getOrNull(3)?.toDouble(),
-                        "ppg4" to values.getOrNull(4)?.toDouble(),
-                        "ppg5" to values.getOrNull(5)?.toDouble()
-                    )
-                    runOnUiThread { fnirsEventSink?.success(data) }
+                    // PPG packets contain 3 channels: AMBIENT (or GREEN on some models), IR, RED
+                    // Note: Muse S Athena uses OPTICS for fNIRS, but PPG may still be available
+                    // On Muse 2019, AMBIENT represents GREEN. On Muse 2025, OPTICS is used for PPG.
+                    try {
+                        val ppgAmbient = packet.getPpgChannelValue(Ppg.AMBIENT) // May be GREEN on some models
+                        val ppgIr = packet.getPpgChannelValue(Ppg.IR)
+                        val ppgRed = packet.getPpgChannelValue(Ppg.RED)
+                        val data = mapOf(
+                            "deviceId" to deviceId,
+                            "timestamp" to timestamp,
+                            "ppgGreen" to ppgAmbient, // AMBIENT may represent GREEN
+                            "ppgIr" to ppgIr,
+                            "ppgRed" to ppgRed,
+                        )
+                        Log.d("MuseSDK", "Sending PPG data: ppgGreen=$ppgAmbient, ppgIr=$ppgIr, ppgRed=$ppgRed")
+                        runOnUiThread { fnirsEventSink?.success(data) }
+                    } catch (e: Exception) {
+                        // Fallback to values() if getPpgChannelValue not available
+                        val values = packet.values()
+                        val data = mapOf(
+                            "deviceId" to deviceId,
+                            "timestamp" to timestamp,
+                            "ppgGreen" to (values.getOrNull(0)?.toDouble() ?: 0.0),
+                            "ppgIr" to (values.getOrNull(1)?.toDouble() ?: 0.0),
+                            "ppgRed" to (values.getOrNull(2)?.toDouble() ?: 0.0),
+                        )
+                        runOnUiThread { fnirsEventSink?.success(data) }
+                    }
                 }
                 MuseDataPacketType.HSI_PRECISION -> {
                     updateHsiState(deviceId, packet, isArtifactPacket = false)
@@ -289,6 +365,8 @@ class MainActivity: FlutterActivity() {
                             
                             // Register for fNIRS/PPG (Muse S Athena only - will be ignored on other models)
                             muse.registerDataListener(dataListener, MuseDataPacketType.PPG)
+                            // Register for OPTICS packets (Muse S Athena - contains 16 channels of fNIRS data)
+                            muse.registerDataListener(dataListener, MuseDataPacketType.OPTICS)
 
                             // Register for HSI and Artifacts
                             muse.registerDataListener(dataListener, MuseDataPacketType.HSI_PRECISION)
@@ -297,21 +375,61 @@ class MainActivity: FlutterActivity() {
                             // Register for Battery
                             muse.registerDataListener(dataListener, MuseDataPacketType.BATTERY)
                             
-                            // Initialize band power buffer
-                            bandPowerBuffers[deviceId] = mutableMapOf()
+                            // Initialize band power buffer with zeros to avoid lag
+                            bandPowerBuffers[deviceId] = mutableMapOf(
+                                "tp9_alpha_absolute" to 0.0, "af7_alpha_absolute" to 0.0, 
+                                "af8_alpha_absolute" to 0.0, "tp10_alpha_absolute" to 0.0,
+                                "tp9_beta_absolute" to 0.0, "af7_beta_absolute" to 0.0, 
+                                "af8_beta_absolute" to 0.0, "tp10_beta_absolute" to 0.0,
+                                "tp9_delta_absolute" to 0.0, "af7_delta_absolute" to 0.0, 
+                                "af8_delta_absolute" to 0.0, "tp10_delta_absolute" to 0.0,
+                                "tp9_theta_absolute" to 0.0, "af7_theta_absolute" to 0.0, 
+                                "af8_theta_absolute" to 0.0, "tp10_theta_absolute" to 0.0,
+                                "tp9_gamma_absolute" to 0.0, "af7_gamma_absolute" to 0.0, 
+                                "af8_gamma_absolute" to 0.0, "tp10_gamma_absolute" to 0.0,
+                                "tp9_alpha_relative" to 0.0, "af7_alpha_relative" to 0.0, 
+                                "af8_alpha_relative" to 0.0, "tp10_alpha_relative" to 0.0,
+                                "tp9_beta_relative" to 0.0, "af7_beta_relative" to 0.0, 
+                                "af8_beta_relative" to 0.0, "tp10_beta_relative" to 0.0,
+                                "tp9_delta_relative" to 0.0, "af7_delta_relative" to 0.0, 
+                                "af8_delta_relative" to 0.0, "tp10_delta_relative" to 0.0,
+                                "tp9_theta_relative" to 0.0, "af7_theta_relative" to 0.0, 
+                                "af8_theta_relative" to 0.0, "tp10_theta_relative" to 0.0,
+                                "tp9_gamma_relative" to 0.0, "af7_gamma_relative" to 0.0, 
+                                "af8_gamma_relative" to 0.0, "tp10_gamma_relative" to 0.0
+                            )
                             
                             // Set preset based on device model
-                            // Muse S (MU_03) supports PPG (fNIRS) -> PRESET_22
-                            // Muse 2 (MU_02) and older -> PRESET_21
                             val model = muse.getModel()
-                            Log.d("MuseSDK", "Device Model: $model")
+                            Log.d("MuseSDK", "Device Model: $model (name: ${model.name})")
                             
-                            if (model == MuseModel.MU_03) {
-                                Log.d("MuseSDK", "Setting PRESET_22 for Muse S (PPG enabled)")
-                                muse.setPreset(MusePreset.PRESET_22)
-                            } else {
-                                Log.d("MuseSDK", "Setting PRESET_21 for Muse 2/Older (No PPG)")
-                                muse.setPreset(MusePreset.PRESET_21)
+                            when (model) {
+                                MuseModel.MS_03 -> {
+                                    // Muse S Athena (2025) - uses OPTICS for fNIRS
+                                    // PRESET_1031: 4 CH EEG, 256 Hz, 52 Hz accel/gyro, 32 Hz DRL/REF, 16 CH Optics @ 64 Hz
+                                    Log.d("MuseSDK", "Setting PRESET_1031 for Muse S Athena (16 CH Optics enabled)")
+                                    try {
+                                        muse.setPreset(MusePreset.PRESET_1031)
+                                    } catch (e: Exception) {
+                                        Log.e("MuseSDK", "PRESET_1031 failed, trying PRESET_22: ${e.message}")
+                                        muse.setPreset(MusePreset.PRESET_22)
+                                    }
+                                }
+                                MuseModel.MU_04, MuseModel.MU_05 -> {
+                                    // Muse S 2019/2021 - uses PPG
+                                    Log.d("MuseSDK", "Setting PRESET_22 for Muse S 2019/2021 (PPG enabled)")
+                                    muse.setPreset(MusePreset.PRESET_22)
+                                }
+                                MuseModel.MU_03 -> {
+                                    // Muse 2 (2018) - uses PPG
+                                    Log.d("MuseSDK", "Setting PRESET_22 for Muse 2 (PPG enabled)")
+                                    muse.setPreset(MusePreset.PRESET_22)
+                                }
+                                else -> {
+                                    // Older models
+                                    Log.d("MuseSDK", "Setting PRESET_21 for older Muse model")
+                                    muse.setPreset(MusePreset.PRESET_21)
+                                }
                             }
                             
                             muse.runAsynchronously()
