@@ -10,7 +10,10 @@ import '../../../../domain/models/arousal_sample.dart';
 import '../../../../domain/models/muse_device.dart';
 import '../../../../presentation/providers/device_provider.dart';
 import '../../../../presentation/providers/arousal_provider.dart';
+import '../../../../presentation/providers/recording_provider.dart';
 import '../../../../presentation/widgets/arousal_chart.dart';
+import '../../../../presentation/widgets/eeg_chart.dart';
+import '../../../../presentation/widgets/band_power_chart.dart';
 import '../../../../data/ai/meditation_ai_service.dart';
 
 /// Live arousal analysis session screen with AI meditation guide
@@ -76,6 +79,34 @@ class _ArousalLiveSessionScreenState
 
     // Initial welcome message
     _showWelcomeFeedback();
+    
+    // Start full data recording (like Data Collection mode)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startFullDataRecording();
+    });
+  }
+  
+  /// Start full data recording using RecordingManager (same as Data Collection)
+  Future<void> _startFullDataRecording() async {
+    try {
+      // Create session config with all columns selected
+      ref.read(sessionConfigProvider.notifier).createConfig(
+        selectedDeviceIds: [widget.deviceId],
+        selectedColumns: Set.from(AppConstants.csvColumns),
+        sessionName: '${widget.goal.displayName}_${DateFormat('yyyy-MM-dd_HHmmss').format(_sessionStartTime)}',
+        notes: 'AI Meditation Session - Goal: ${widget.goal.displayName}',
+      );
+      
+      // Start recording
+      final recordingManager = ref.read(recordingManagerProvider);
+      await recordingManager.startRecording();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start data recording: $e')),
+        );
+      }
+    }
   }
 
   void _showWelcomeFeedback() {
@@ -121,6 +152,7 @@ class _ArousalLiveSessionScreenState
     _recordingAnimationController.dispose();
     _aiService.stopSpeaking();
     _aiService.dispose();
+    // Note: Don't stop recording here - it's handled in _showSessionSummary
     super.dispose();
   }
 
@@ -209,6 +241,10 @@ class _ArousalLiveSessionScreenState
   Future<void> _showSessionSummary() async {
     _aiService.stopSpeaking();
     _feedbackTimer?.cancel();
+    
+    // Stop full data recording
+    final recordingManager = ref.read(recordingManagerProvider);
+    await recordingManager.stopRecording();
 
     // Generate session summary
     final arousalValues = _arousalHistory.map((s) => s.arousalIndex).toList();
@@ -276,6 +312,28 @@ class _ArousalLiveSessionScreenState
                 style: const TextStyle(fontSize: 15, height: 1.5),
               ),
               const SizedBox(height: 16),
+              // Info about full data recording
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Full EEG data has been recorded and saved to your device.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               // Action buttons
               Row(
                 children: [
@@ -283,7 +341,7 @@ class _ArousalLiveSessionScreenState
                     child: OutlinedButton.icon(
                       onPressed: () => _saveAndShareSession(context),
                       icon: const Icon(Icons.download),
-                      label: const Text('Save Session'),
+                      label: const Text('Export Arousal CSV'),
                     ),
                   ),
                 ],
@@ -565,6 +623,16 @@ class _ArousalLiveSessionScreenState
 
               // Arousal Chart
               _buildChartCard(arousalAsync),
+
+              const SizedBox(height: 16),
+              
+              // EEG Raw Data Chart
+              _buildEegChartCard(),
+              
+              const SizedBox(height: 16),
+              
+              // Band Powers Chart
+              _buildBandPowerChartCard(),
 
               const SizedBox(height: 24),
 
@@ -955,6 +1023,120 @@ class _ArousalLiveSessionScreenState
                   child: Center(
                     child: Text('Waiting for EEG data...'),
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildEegChartCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'EEG Raw Data',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.fiber_manual_record, size: 8, color: Colors.green),
+                        SizedBox(width: 4),
+                        Text(
+                          'Recording',
+                          style: TextStyle(fontSize: 10, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 200,
+                child: ref.watch(eegStreamProvider(widget.deviceId)).when(
+                  data: (eegSample) => EegChart(
+                    dataStream: ref.read(eegStreamProvider(widget.deviceId).stream),
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Center(child: Text('EEG Error: $e')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildBandPowerChartCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Band Powers',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.fiber_manual_record, size: 8, color: Colors.green),
+                        SizedBox(width: 4),
+                        Text(
+                          'Recording',
+                          style: TextStyle(fontSize: 10, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 200,
+                child: ref.watch(bandPowerStreamProvider(widget.deviceId)).when(
+                  data: (sample) => BandPowerChart(
+                    dataStream: ref.read(bandPowerStreamProvider(widget.deviceId).stream),
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Center(child: Text('Band Power Error: $e')),
                 ),
               ),
             ],

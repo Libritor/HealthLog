@@ -133,12 +133,12 @@ class MeditationGoalScreen extends ConsumerWidget {
         title: const Text('Choose Your Goal'),
         elevation: 2,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
             // Header
             const Text(
@@ -150,7 +150,7 @@ class MeditationGoalScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             
             Text(
               'The AI mentor will guide you based on your goal',
@@ -161,56 +161,52 @@ class MeditationGoalScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             
-            const SizedBox(height: 48),
+            const SizedBox(height: 24),
             
             // Focus (Increase Arousal) Card
-            Expanded(
-              child: _GoalCard(
-                goal: MeditationGoal.focus,
-                title: 'Focus',
-                subtitle: 'Increase alertness & concentration',
-                description: 'Boost your arousal index to sharpen your mind, '
-                    'enhance productivity, and improve cognitive performance.',
-                icon: Icons.bolt,
-                color: Colors.orange,
-                onTap: deviceId != null ? () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ArousalLiveSessionScreen(
-                        deviceId: deviceId,
-                        goal: MeditationGoal.focus,
-                      ),
+            _GoalCard(
+              goal: MeditationGoal.focus,
+              title: 'Focus',
+              subtitle: 'Increase alertness & concentration',
+              description: 'Boost your arousal index to sharpen your mind, '
+                  'enhance productivity, and improve cognitive performance.',
+              icon: Icons.bolt,
+              color: Colors.orange,
+              onTap: deviceId != null ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ArousalLiveSessionScreen(
+                      deviceId: deviceId,
+                      goal: MeditationGoal.focus,
                     ),
-                  );
-                } : null,
-              ),
+                  ),
+                );
+              } : null,
             ),
             
             const SizedBox(height: 16),
             
             // Calm (Decrease Arousal) Card
-            Expanded(
-              child: _GoalCard(
-                goal: MeditationGoal.calm,
-                title: 'Calm Down',
-                subtitle: 'Relax & find inner peace',
-                description: 'Lower your arousal index to reduce stress, '
-                    'promote relaxation, and achieve a peaceful state of mind.',
-                icon: Icons.spa,
-                color: Colors.blue,
-                onTap: deviceId != null ? () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ArousalLiveSessionScreen(
-                        deviceId: deviceId,
-                        goal: MeditationGoal.calm,
-                      ),
+            _GoalCard(
+              goal: MeditationGoal.calm,
+              title: 'Calm Down',
+              subtitle: 'Relax & find inner peace',
+              description: 'Lower your arousal index to reduce stress, '
+                  'promote relaxation, and achieve a peaceful state of mind.',
+              icon: Icons.spa,
+              color: Colors.blue,
+              onTap: deviceId != null ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ArousalLiveSessionScreen(
+                      deviceId: deviceId,
+                      goal: MeditationGoal.calm,
                     ),
-                  );
-                } : null,
-              ),
+                  ),
+                );
+              } : null,
             ),
             
             const SizedBox(height: 24),
@@ -295,7 +291,7 @@ class _GoalCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
@@ -309,22 +305,23 @@ class _GoalCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       icon,
-                      size: 36,
+                      size: 32,
                       color: onTap != null ? color : Colors.grey,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +329,7 @@ class _GoalCard extends StatelessWidget {
                         Text(
                           title,
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: onTap != null ? color : Colors.grey,
                           ),
@@ -340,7 +337,7 @@ class _GoalCard extends StatelessWidget {
                         Text(
                           subtitle,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: onTap != null 
                                 ? color.withOpacity(0.8) 
                                 : Colors.grey,
@@ -355,18 +352,18 @@ class _GoalCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 description,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   color: onTap != null 
                       ? Colors.grey[700] 
                       : Colors.grey,
-                  height: 1.4,
+                  height: 1.3,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 12),
               // Goal indicator
               Row(
                 children: [
@@ -374,7 +371,7 @@ class _GoalCard extends StatelessWidget {
                     goal == MeditationGoal.focus
                         ? Icons.trending_up
                         : Icons.trending_down,
-                    size: 18,
+                    size: 16,
                     color: onTap != null ? color : Colors.grey,
                   ),
                   const SizedBox(width: 6),
@@ -383,7 +380,7 @@ class _GoalCard extends StatelessWidget {
                         ? 'Increase arousal index'
                         : 'Decrease arousal index',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: onTap != null ? color : Colors.grey,
                     ),

@@ -366,9 +366,101 @@ class _MuseAICalibrationScreenState
               ),
             ),
           ),
+          
+          const SizedBox(height: 16),
+          
+          // Skip Calibration button
+          SizedBox(
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: isProcessing ? null : () => _skipCalibration(context),
+              icon: const Icon(Icons.skip_next),
+              label: const Text(
+                'Skip Calibration',
+                style: TextStyle(fontSize: 16),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                side: BorderSide(color: Colors.grey[400]!),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          const Text(
+            'Skip if you already have a calibrated profile',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
         ],
       ),
     );
+  }
+  
+  /// Skip calibration and go directly to goal selection
+  Future<void> _skipCalibration(BuildContext context) async {
+    // Check if model state already exists
+    final modelState = await ref.read(arousalModelStateProvider.future);
+    
+    if (modelState == null) {
+      // No existing model - show warning
+      if (mounted) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('No Calibration Found'),
+            content: const Text(
+              'No existing calibration profile was found. '
+              'The arousal analysis may be less accurate without calibration.\n\n'
+              'Do you want to continue anyway?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                child: const Text('Continue Without Calibration'),
+              ),
+            ],
+          ),
+        );
+        
+        if (proceed != true) return;
+      }
+    }
+    
+    // Get connected devices
+    final connectedDevices = ref.read(connectedDevicesProvider);
+    if (connectedDevices.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No device connected. Please connect a device first.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+    
+    // Navigate directly to goal selection
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MeditationGoalScreen(),
+        ),
+      );
+    }
   }
 
   Widget _buildProgressIndicator() {

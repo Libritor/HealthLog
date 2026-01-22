@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/arousal/arousal_service.dart';
@@ -88,12 +89,17 @@ double _avgChannelBand(BandPowerSample s, String band) {
 }
 
 /// Helper function to create arousal stream from band power stream
-/// This uses pre-computed band powers which is more efficient
+/// Uses improved normalization with wider expected ratio range
 Stream<ArousalSample> _createArousalStreamFromBandPowers(
   Stream<BandPowerSample> bandPowerStream,
 ) async* {
   final buffer = <BandPowerSample>[];
   final targetBufferSize = 8; // ~2 seconds at 4Hz band power rate
+  
+  // Running statistics for adaptive normalization
+  final arousalHistory = <double>[];
+  double runningMin = double.infinity;
+  double runningMax = double.negativeInfinity;
   
   await for (final sample in bandPowerStream) {
     buffer.add(sample);
@@ -102,23 +108,112 @@ Stream<ArousalSample> _createArousalStreamFromBandPowers(
     if (buffer.length >= targetBufferSize) {
       try {
         // Compute average band powers across buffer
-        double avgAlpha = 0, avgBeta = 0, avgTheta = 0, avgGamma = 0;
+        double avgAlpha = 0, avgBeta = 0, avgTheta = 0, avgGamma = 0, avgDelta = 0;
+        int validSamples = 0;
+        
         for (final s in buffer) {
-          avgAlpha += _avgChannelBand(s, 'alpha');
-          avgBeta += _avgChannelBand(s, 'beta');
-          avgTheta += _avgChannelBand(s, 'theta');
-          avgGamma += _avgChannelBand(s, 'gamma');
+          final alpha = _avgChannelBand(s, 'alpha');
+          final beta = _avgChannelBand(s, 'beta');
+          final theta = _avgChannelBand(s, 'theta');
+          final gamma = _avgChannelBand(s, 'gamma');
+          final delta = _avgChannelBand(s, 'delta');
+          
+          // Skip invalid samples (NaN or very low values indicating no signal)
+          if (alpha.isNaN || beta.isNaN || theta.isNaN || gamma.isNaN ||
+              (alpha + beta + theta + gamma + delta) < 0.001) {
+            continue;
+          }
+          
+          avgAlpha += alpha;
+          avgBeta += beta;
+          avgTheta += theta;
+          avgGamma += gamma;
+          avgDelta += delta;
+          validSamples++;
         }
-        avgAlpha /= buffer.length;
-        avgBeta /= buffer.length;
-        avgTheta /= buffer.length;
-        avgGamma /= buffer.length;
         
-        // Compute arousal index: (beta + gamma) / (alpha + theta)
-        final arousalIndex = ((avgBeta + avgGamma) / (avgAlpha + avgTheta + 1e-6))
-            .clamp(0.0, 2.0) / 2.0; // Normalize to 0-1
+        // Only proceed if we have enough valid samples
+        if (validSamples < targetBufferSize / 2) {
+          buffer.clear();
+          continue;
+        }
         
-        // Determine label
+        avgAlpha /= validSamples;
+        avgBeta /= validSamples;
+        avgTheta /= validSamples;
+        avgGamma /= validSamples;
+        avgDelta /= validSamples;
+        
+        // Compute total power for relative values
+        final totalPower = avgDelta + avgTheta + avgAlpha + avgBeta + avgGamma;
+        
+        // Use relative band powers for more stable arousal calculation
+        final relAlpha = totalPower > 0 ? avgAlpha / totalPower : 0.0;
+        final relBeta = totalPower > 0 ? avgBeta / totalPower : 0.0;
+        final relTheta = totalPower > 0 ? avgTheta / totalPower : 0.0;
+        final relGamma = totalPower > 0 ? avgGamma / totalPower : 0.0;
+        final relDelta = totalPower > 0 ? avgDelta / totalPower : 0.0;
+        
+        // Compute arousal ratio using relative powers
+        // Higher beta/gamma relative to alpha/theta = higher arousal
+        // Add delta to the denominator for stability (low frequency = relaxed)
+        final denominator = relAlpha + relTheta + (relDelta * 0.5);
+        final arousalRatio = denominator > 0.001 
+            ? (relBeta + relGamma * 1.5) / denominator  // Weight gamma higher
+            : 0.5;
+        
+        // Track running statistics for adaptive normalization
+        if (arousalRatio.isFinite && arousalRatio > 0) {
+          arousalHistory.add(arousalRatio);
+          if (arousalHistory.length > 50) arousalHistory.removeAt(0);
+          
+          if (arousalRatio < runningMin) runningMin = arousalRatio;
+          if (arousalRatio > runningMax) runningMax = arousalRatio;
+        }
+        
+        // Normalize to 0-1 range using sigmoid transformation
+        // This gives better distribution across the range
+        double arousalIndex;
+        
+        if (arousalHistory.length >= 5) {
+          // Use adaptive normalization based on observed data
+          // Calculate mean and std for better scaling
+          final mean = arousalHistory.reduce((a, b) => a + b) / arousalHistory.length;
+          double variance = 0;
+          for (final v in arousalHistory) {
+            variance += (v - mean) * (v - mean);
+          }
+          final std = math.sqrt(variance / arousalHistory.length);
+          
+          if (std > 0.01) {
+            // Z-score normalization then sigmoid
+            final zScore = (arousalRatio - mean) / std;
+            // Sigmoid that maps z=-2 to ~0.1 and z=+2 to ~0.9
+            arousalIndex = 1.0 / (1.0 + math.exp(-zScore));
+          } else {
+            // Low variance - use range-based normalization
+            final range = runningMax - runningMin;
+            if (range > 0.01) {
+              arousalIndex = ((arousalRatio - runningMin) / range).clamp(0.0, 1.0);
+            } else {
+              // Very narrow range - map to middle
+              arousalIndex = 0.5;
+            }
+          }
+        } else {
+          // Initial samples - use sigmoid with empirical center
+          // Center around 0.3 which is a typical resting ratio
+          final centered = arousalRatio - 0.3;
+          arousalIndex = 1.0 / (1.0 + math.exp(-centered * 4.0));
+        }
+        
+        // Ensure arousal index is valid and has some spread
+        if (!arousalIndex.isFinite) {
+          arousalIndex = 0.5;
+        }
+        arousalIndex = arousalIndex.clamp(0.0, 1.0);
+        
+        // Determine label based on arousal index
         String label;
         if (arousalIndex < 0.33) {
           label = 'low';
@@ -128,10 +223,22 @@ Stream<ArousalSample> _createArousalStreamFromBandPowers(
           label = 'high';
         }
         
-        // Simple probability model based on distance from thresholds
-        final lowProb = arousalIndex < 0.5 ? (1 - arousalIndex * 2) : 0.0;
-        final highProb = arousalIndex > 0.5 ? ((arousalIndex - 0.5) * 2) : 0.0;
-        final mediumProb = 1.0 - lowProb - highProb;
+        // Compute cluster probabilities using soft assignment
+        // Use gaussian-like falloff from each center
+        final lowCenter = 0.17;
+        final medCenter = 0.5;
+        final highCenter = 0.83;
+        final sigma = 0.25;
+        
+        double lowProb = math.exp(-math.pow(arousalIndex - lowCenter, 2) / (2 * sigma * sigma));
+        double medProb = math.exp(-math.pow(arousalIndex - medCenter, 2) / (2 * sigma * sigma));
+        double highProb = math.exp(-math.pow(arousalIndex - highCenter, 2) / (2 * sigma * sigma));
+        
+        // Normalize probabilities
+        final probSum = lowProb + medProb + highProb;
+        lowProb /= probSum;
+        medProb /= probSum;
+        highProb /= probSum;
         
         buffer.clear();
         
@@ -139,11 +246,11 @@ Stream<ArousalSample> _createArousalStreamFromBandPowers(
           timestamp: DateTime.now(),
           arousalIndex: arousalIndex,
           arousalLabel: label,
-          confidence: 0.7, // Moderate confidence for band-power-based estimate
+          confidence: validSamples >= targetBufferSize ? 0.8 : 0.6,
           confidenceMargin: (arousalIndex - 0.5).abs() * 2,
           clusterProbs: {
             'low': lowProb.clamp(0.0, 1.0),
-            'medium': mediumProb.clamp(0.0, 1.0),
+            'medium': medProb.clamp(0.0, 1.0),
             'high': highProb.clamp(0.0, 1.0),
           },
         );
@@ -164,4 +271,3 @@ final arousalStreamProvider = StreamProvider.family<ArousalSample, String>((ref,
   // Create arousal stream from band powers
   return _createArousalStreamFromBandPowers(bandPowerStream);
 });
-
